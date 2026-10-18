@@ -1,0 +1,173 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#081426">
+<title>Lucky1 | Plane Demo</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#081426;color:#fff;font-family:Arial,sans-serif}
+header{padding:18px 16px;background:#10213b;border-bottom:1px solid #263b59;display:flex;justify-content:space-between;align-items:center}
+.logo{font-size:25px;font-weight:900;color:#65a5ff}
+.pill{font-size:11px;border:1px solid #54708d;border-radius:20px;padding:7px;color:#c8d9ef}
+main{max-width:650px;margin:auto;padding:16px}
+.balance{background:#10213b;border-radius:14px;padding:15px;display:flex;justify-content:space-between;align-items:center}
+.small{font-size:12px;color:#9bb0cc}
+.amount{font-size:23px;font-weight:bold;margin-top:6px;color:#fff}
+.arena{height:310px;position:relative;overflow:hidden;margin-top:14px;border-radius:16px;border:1px solid #294363;background:radial-gradient(ellipse at bottom,#17385b,#0b192e 72%)}
+.stars{position:absolute;inset:0;background-image:radial-gradient(#91b8e7 1px,transparent 1px);background-size:35px 37px;opacity:.28}
+.mult{position:absolute;top:30%;width:100%;text-align:center;font-size:54px;font-weight:900;letter-spacing:-2px}
+.status{position:absolute;top:53%;width:100%;text-align:center;color:#a9bed8;font-size:13px}
+.plane{position:absolute;left:12%;bottom:17%;font-size:43px;transform:rotate(-22deg);filter:drop-shadow(0 0 10px #4d9bff);transition:bottom .12s linear,left .12s linear}
+.trail{position:absolute;left:8%;bottom:15%;height:3px;width:0;background:#ff626c;transform-origin:left;transform:rotate(-24deg);box-shadow:0 0 9px #ff626c}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+button{border:0;border-radius:12px;padding:17px 10px;font-size:16px;font-weight:bold;cursor:pointer}
+button:disabled{opacity:.45;cursor:not-allowed}
+.start{background:#27d88b;color:#062c20}
+.cash{background:#ffbf43;color:#302000}
+.stakebox{margin-top:14px;background:#10213b;padding:14px;border-radius:12px}
+label{display:block;color:#a9bed8;font-size:12px;margin-bottom:8px}
+input{width:100%;padding:13px;border-radius:8px;border:1px solid #3b5270;background:#081426;color:white;font-size:16px}
+.history{margin-top:18px;background:#10213b;padding:14px;border-radius:12px}
+.history h3{font-size:14px;margin:0 0 12px}
+.rounds{display:flex;flex-wrap:wrap;gap:8px}
+.round{border-radius:20px;background:#203751;color:#a9bed8;padding:7px 11px;font-size:12px}
+.win{color:#4de4a2}.loss{color:#ff727d}
+.note{text-align:center;font-size:11px;color:#8298b5;line-height:1.7;margin:18px 0}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">✈ Lucky1</div>
+  <div class="pill">FREE DEMO</div>
+</header>
+<main>
+  <div class="balance">
+    <div><div class="small">VIRTUAL BALANCE</div><div class="amount" id="balance">1,000 pts</div></div>
+    <div style="text-align:right"><div class="small">YOUR MODE</div><strong>Practice</strong></div>
+  </div>
+
+  <div class="arena" id="arena">
+    <div class="stars"></div>
+    <div class="mult" id="mult">1.00x</div>
+    <div class="status" id="status">Ready for takeoff?</div>
+    <div class="trail" id="trail"></div>
+    <div class="plane" id="plane">✈️</div>
+  </div>
+
+  <div class="stakebox">
+    <label for="stake">VIRTUAL POINTS PER ROUND</label>
+    <input id="stake" type="number" min="1" max="1000" step="1" value="50">
+  </div>
+
+  <div class="controls">
+    <button class="start" id="start" onclick="startRound()">▶ START ROUND</button>
+    <button class="cash" id="cash" onclick="cashOut()" disabled>COLLECT 0 PTS</button>
+  </div>
+
+  <div class="history">
+    <h3>RECENT ROUNDS</h3>
+    <div class="rounds" id="history"><span class="small">Your rounds will appear here.</span></div>
+  </div>
+  <div class="note">Virtual points only · No deposits · No real-money prizes<br>Crash outcomes are simulated for entertainment.</div>
+</main>
+
+<script>
+let balance=1000;
+let active=false;
+let cashed=false;
+let multiplier=1;
+let crashAt=2;
+let stake=50;
+let startedAt=0;
+let timer=null;
+let rounds=[];
+const $=id=>document.getElementById(id);
+
+function showBalance(){
+  $("balance").textContent=balance.toLocaleString()+" pts";
+}
+function showHistory(){
+  $("history").innerHTML=rounds.length
+    ? rounds.map(r=>`<span class="round ${r.win?'win':'loss'}">${r.text}</span>`).join("")
+    : '<span class="small">Your rounds will appear here.</span>';
+}
+function resetPlane(){
+  $("plane").style.left="12%";
+  $("plane").style.bottom="17%";
+  $("trail").style.width="0";
+}
+function startRound(){
+  if(active)return;
+  stake=Number($("stake").value);
+  if(!Number.isInteger(stake)||stake<1||stake>balance){
+    $("status").textContent="Enter a valid stake within your balance.";
+    return;
+  }
+  balance-=stake;
+  showBalance();
+  active=true;
+  cashed=false;
+  multiplier=1;
+  startedAt=Date.now();
+  // Demo-only random crash point.
+  const r=Math.random();
+  crashAt=Math.min(15,Math.max(1.05,0.97/(1-r)));
+  $("start").disabled=true;
+  $("cash").disabled=false;
+  $("status").textContent="Plane is flying! Collect before the crash.";
+  $("mult").style.color="#ffffff";
+  resetPlane();
+  timer=setInterval(tick,50);
+}
+function tick(){
+  const elapsed=(Date.now()-startedAt)/1000;
+  multiplier=Math.exp(elapsed*0.20);
+  if(multiplier>=crashAt){
+    multiplier=crashAt;
+    $("mult").textContent=multiplier.toFixed(2)+"x";
+    crash();
+    return;
+  }
+  $("mult").textContent=multiplier.toFixed(2)+"x";
+  const progress=Math.min(1,elapsed/12);
+  $("plane").style.left=(12+progress*60)+"%";
+  $("plane").style.bottom=(17+progress*53)+"%";
+  $("trail").style.width=(progress*65)+"%";
+  $("cash").textContent="COLLECT "+Math.floor(stake*multiplier)+" PTS";
+}
+function cashOut(){
+  if(!active||cashed)return;
+  cashed=true;
+  active=false;
+  clearInterval(timer);
+  const payout=Math.floor(stake*multiplier);
+  balance+=payout;
+  showBalance();
+  $("mult").style.color="#4de4a2";
+  $("status").textContent="Collected "+payout+" virtual points!";
+  $("cash").disabled=true;
+  $("start").disabled=false;
+  $("cash").textContent="COLLECTED ✓";
+  rounds.unshift({text:multiplier.toFixed(2)+"x · WIN",win:true});
+  rounds=rounds.slice(0,8);
+  showHistory();
+}
+function crash(){
+  active=false;
+  clearInterval(timer);
+  $("mult").style.color="#ff727d";
+  $("status").textContent="CRASH! This round is over.";
+  $("cash").disabled=true;
+  $("start").disabled=false;
+  $("cash").textContent="ROUND ENDED";
+  rounds.unshift({text:multiplier.toFixed(2)+"x · CRASH",win:false});
+  rounds=rounds.slice(0,8);
+  showHistory();
+}
+</script>
+</body>
+</html>
+  
